@@ -298,6 +298,12 @@ return {
                 self.auto_start_time = self.config.auto_start_time
                 self.config.auto_start_time = undefined
                 save_node_persist(self.node_name)
+
+                if(self.state == 'timer_select'){
+                    self.timer_time = self.auto_start_time
+                    self.draw_display_timer(response, true)
+                    self.display_time_select(response)
+                }
             }
         }
     },
