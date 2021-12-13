@@ -4,6 +4,7 @@ import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.Toast
 import org.json.JSONObject
@@ -53,6 +54,7 @@ class MainActivity : AppCompatActivity() {
                                 .put(
                                     "set", JSONObject()
                                         .put("stopwatchApp._.config.auto_start_time", millisTotal)
+                                        .put("stopwatchApp._.config.start_immediately", findViewById<CheckBox>(R.id.checkbox_auto_start).isChecked)
                                 )
                         )
                     Toast.makeText(this, "sending to watch, please reastart timer", Toast.LENGTH_LONG).show()

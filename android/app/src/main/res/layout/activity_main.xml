@@ -72,6 +72,13 @@
                 android:id="@+id/edit_hours"/>
         </LinearLayout>
 
+        <CheckBox
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Immediately start stopwatch/timer"
+            android:id="@+id/checkbox_auto_start"
+            android:textSize="20dp"/>
+
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
