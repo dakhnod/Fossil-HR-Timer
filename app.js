@@ -6,7 +6,7 @@ return {
     },
     persist: {
         version: 1,
-        data: ['auto_start_time']
+        data: ['auto_start_time', 'start_immediately']
     },
     config: {},
     timer_start: 0,
@@ -16,13 +16,13 @@ return {
     paused_stopwatch_time: 0,
     last_timer_time: 0,
     select_direction: '',
-    state: 'timer_select',
+    state: 'dead',
     laps: [],
     last_header_text: '',
     last_displayed_hour: 0,
     title_refers_to_timer: false,
-    first_launch: true,
     auto_start_time: 0,
+    start_immediately: true,
 
     handler: function (event, response) { // function 1
         this.wrap_event(event)
@@ -268,15 +268,30 @@ return {
 
         this.start_timer_tick_timer()
     },
+    timer_stopwatch_start: function(self, response){
+        self.timer_start = now()
+        self.start_timer_tick_timer()
+        self.last_displayed_hour = 0
+        if (self.timer_time == 0) {
+            self.laps.splice(0)
+            self.state_machine.set_current_state('stopwatch_run')
+        } else {
+            self.state_machine.set_current_state('timer_run')
+        }
+    },
     handle_global_event: function (self, state_machine, event, response) {
-
         if (event.type === 'system_state_update' && event.concerns_this_app === true) {
             if (event.new_state === 'visible') {
-                if(self.first_launch){
-                    self.first_launch = false
+                if(self.state == 'dead'){
                     self.timer_time = self.auto_start_time
+                    if(self.start_immediately){
+                        self.timer_stopwatch_start(self, response)
+                    }else{
+                        state_machine.set_current_state('timer_select')
+                    }
+                }else{
+                    self.state_machine.set_current_state(self.state)
                 }
-                state_machine.set_current_state(self.state)
             } else {
                 state_machine.set_current_state('background')
             }
@@ -294,16 +309,26 @@ return {
         } else if (event.type === 'timer_dismiss') {
             response.go_back(true)
         } else if (event.type == 'node_config_update' && event.node_name == self.node_name){
+            var save_config = false
             if(typeof(self.config.auto_start_time) !== 'undefined'){
                 self.auto_start_time = self.config.auto_start_time
                 self.config.auto_start_time = undefined
-                save_node_persist(self.node_name)
+                save_config = true
 
                 if(self.state == 'timer_select'){
                     self.timer_time = self.auto_start_time
                     self.draw_display_timer(response, true)
                     self.display_time_select(response)
                 }
+            }
+            if(typeof(self.config.start_immediately) !== 'undefined'){
+                self.start_immediately = self.config.start_immediately
+                self.config.start_immediately = undefined
+                save_config = true
+            }
+
+            if(save_config){
+                save_node_persist(self.node_name)
             }
         }
     },
@@ -334,15 +359,7 @@ return {
                     return function (self, state_machine, event, response) {
                         type = event.type
                         if (type === 'middle_short_press_release') {
-                            self.timer_start = now()
-                            self.start_timer_tick_timer()
-                            self.last_displayed_hour = 0
-                            if (self.timer_time == 0) {
-                                self.laps.splice(0)
-                                self.state_machine.set_current_state('stopwatch_run')
-                            } else {
-                                self.state_machine.set_current_state('timer_run')
-                            }
+                            self.timer_stopwatch_start(self, response)
                         } else if (type === 'top_press') {
                             if (self.timer_time > 0) {
                                 self.timer_time -= 60 * 1000
