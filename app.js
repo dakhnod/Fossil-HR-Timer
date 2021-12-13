@@ -294,7 +294,7 @@ return {
         } else if (event.type === 'timer_dismiss') {
             response.go_back(true)
         } else if (event.type == 'node_config_update' && event.node_name == self.node_name){
-            if(self.config.auto_start_time){
+            if(typeof(self.config.auto_start_time) !== 'undefined'){
                 self.auto_start_time = self.config.auto_start_time
                 self.config.auto_start_time = undefined
                 save_node_persist(self.node_name)
