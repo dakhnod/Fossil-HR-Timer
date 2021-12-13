@@ -1,7 +1,7 @@
 # Custom timer app
 
 This app aims to combine stopwatch, timer and alarm in one app.
-To build, you need to clone [the SDK](https://github.com/dakhnod/Fossil-HR-Timer) and possibly adjust the Makefile, or just flash the .wapp from one of the [releases](releases).
+To build, you need to clone [the SDK](https://github.com/dakhnod/Fossil-HR-Timer) and possibly adjust the Makefile, or just flash the .wapp from one of the [releases](/dakhnod/Fossil-HR-Timer/releases).
 
 ### Stopwatch mode
 When you open the app, it is in stop watch mode.
