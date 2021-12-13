@@ -1,1 +1,3 @@
 *.xcf
+build/files/code
+*.wapp

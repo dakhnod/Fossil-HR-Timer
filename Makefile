@@ -2,7 +2,7 @@ identifier := $(shell cat build/app.json | jq -r '.identifier')
 
 source_file := app.js
 snapshot_file := build/files/code/${identifier}
-tools_dir := $(if $(WATCH_SDK_PATH),$(WATCH_SDK_PATH),../../)
+tools_dir := $(if $(WATCH_SDK_PATH),$(WATCH_SDK_PATH),../Fossil-HR-SDK/)
 package_file := ${identifier}.wapp
 package_path := build/${package_file}
 
