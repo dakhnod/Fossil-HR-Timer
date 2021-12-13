@@ -29,3 +29,10 @@ SO, you don't set the timer directly, but set the absolute time when it needs to
 As an example: It's 6:05 currently, and you set the hands to point at 7:00.
 After starting, the timer will start to count down 0:55, e.g. 55 minutes, since thats the time delta to your set time.
 After pressing the middle button, the watch will calculate the time to your set time and switch to timer mode.
+
+## Companion app
+
+The companion app for Android can be used to pre-set a timer time.
+Let's say we pre-set the timer time to 5 minutes using the companion app,
+whenever we open the timer on the watch, instead of being set to 0 seconds (a.k.a stopwatch mode)
+it will be set to 5 minutes.
