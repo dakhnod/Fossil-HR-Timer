@@ -4,7 +4,10 @@ return {
     manifest: {
         timers: ['select_tick', 'timer_tick']
     },
-    persist: {},
+    persist: {
+        version: 1,
+        data: ['auto_start_time']
+    },
     config: {},
     timer_start: 0,
     timer_time: 0,
@@ -18,6 +21,8 @@ return {
     last_header_text: '',
     last_displayed_hour: 0,
     title_refers_to_timer: false,
+    first_launch: true,
+    auto_start_time: 0,
 
     handler: function (event, response) { // function 1
         this.wrap_event(event)
@@ -267,6 +272,10 @@ return {
 
         if (event.type === 'system_state_update' && event.concerns_this_app === true) {
             if (event.new_state === 'visible') {
+                if(self.first_launch){
+                    self.first_launch = false
+                    self.timer_time = self.auto_start_time
+                }
                 state_machine.set_current_state(self.state)
             } else {
                 state_machine.set_current_state('background')
@@ -284,6 +293,12 @@ return {
             }
         } else if (event.type === 'timer_dismiss') {
             response.go_back(true)
+        } else if (event.type == 'node_config_update' && event.node_name == self.node_name){
+            if(self.config.auto_start_time){
+                self.auto_start_time = self.config.auto_start_time
+                self.config.auto_start_time = undefined
+                save_node_persist(self.node_name)
+            }
         }
     },
     handle_state_specific_event: function (state, state_phase) {
