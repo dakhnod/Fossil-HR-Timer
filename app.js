@@ -22,7 +22,7 @@ return {
     last_displayed_hour: 0,
     title_refers_to_timer: false,
     auto_start_time: 0,
-    start_immediately: true,
+    start_immediately: false,
 
     handler: function (event, response) { // function 1
         this.wrap_event(event)
