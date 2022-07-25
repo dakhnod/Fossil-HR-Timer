@@ -218,6 +218,37 @@ return {
     },
     play_notification: function (response) {
         response.send_generic_event({
+            type: 'urgent_notification_new',
+            info: {
+                title: localization_snprintf('%s', 'Brr Brr'),
+                app_name: this.package_name,
+                icon_name: 'icTimer',
+                Re: 60, // timeout in secs for notification
+                vibe: {
+                    type: 'text',
+                    interval_ms: 1500,
+                    duration_ms: 60000,
+                },
+                exit_event: {
+                    type: 'timer_dismiss'
+                },
+                actions: [
+                    {
+                        Ke: localization_snprintf('%s', 'Dismiss'),
+                        event: {
+                            type: 'timer_dismiss'
+                        }
+                    },
+                    {
+                        Ke: localization_snprintf('%s', 'Repeat'),
+                        event: {
+                            type: 'timer_restart'
+                        }
+                    }
+                ]
+            }
+        })
+        response.send_generic_event({
             type: 'urgent_notification',
             info: {
                 title: localization_snprintf('%s', 'Brr Brr'),
@@ -610,6 +641,11 @@ return {
         return
     },
     init: function () { // function 8
+        var keys = Object.keys(req_data)
+        this.log('output keys: ' + keys.length)
+         //for(var i = 0; i < 18; i++)
+        //    this.log('output keys: ' + keys[i])
+
         this.state_machine = new state_machine(
             this,
             this.handle_global_event,
