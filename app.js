@@ -123,6 +123,15 @@ return {
                 is_relative: relative
             }
         }
+        response.vibrate_pattern = function(type){
+            response.vibe = type
+        }
+        response.vibrate_text_pattern = function(){
+            this.vibrate_pattern('text')
+        }
+        response.vibrate_call_pattern = function(){
+            this.vibrate_pattern('call')
+        }
         response.go_back = function (kill_app) {
             response.action = {
                 type: 'go_back',
@@ -150,9 +159,19 @@ return {
                 class: 'user'
             })
         }
+        response.emulate_double_tap = function(){
+            this.send_user_class_event('double_tap')
+        },
         response.send_generic_event = function (event_object) {
             if (response.i == undefined) response.i = []
             response.i.push(event_object)
+        }
+        response.open_app = function(appName){
+            response.action = {
+                type: 'open_app',
+                node_name: appName,
+                class: 'watch_app',
+            }
         }
         return response
     },
@@ -357,6 +376,20 @@ return {
                 self.config.start_immediately = undefined
                 save_config = true
             }
+            // self.log(self.config.timer_start)
+            if(typeof(self.config.timer_start) == 'object' && typeof(self.config.timer_start.millis) == 'number'){
+                self.timer_time = self.config.timer_start.millis
+                self.log('starting timer with ' + self.timer_time + ' ms', 'api_start')
+                self.timer_stopwatch_start(self, response)
+                self.state = 'timer_run'
+                if(self.config.timer_start.background === true && state_machine.get_current_state() == 'background'){
+                    state_machine.set_current_state('background')
+                }else{
+                    response.open_app('stopwatchApp')
+                }
+                self.config.timer_start = undefined
+                self.log('started timer', 'api_start')
+            }
 
             if(save_config){
                 save_node_persist(self.node_name)
@@ -381,7 +414,7 @@ return {
             case 'timer_select': {
                 if (state_phase == 'entry') {
                     return function (self, response) {
-                        self.state = 'timer_select';
+                        self.state = 'timer_select'
                         self.draw_display_timer(response, true)
                         self.display_time_select(response)
                     }
