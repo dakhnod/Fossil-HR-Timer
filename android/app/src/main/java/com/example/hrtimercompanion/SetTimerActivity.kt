@@ -91,6 +91,12 @@ class SetTimerActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
 
         while(matches.find()){
             val number = Integer.parseInt(matches.group() as String)
+            if(number < 24){
+                timerTargets.add(AbsoluteTimerTarget(number.toLong() * 3600000))
+                if(number < 13){
+                    timerTargets.add(AbsoluteTimerTarget((number.toLong() + 12) * 3600000))
+                }
+            }
             timerTargets.add(RelativeMinutesTimerTarget(number.toLong()))
             timerTargets.add(RelativeHoursTimerTarget(number.toLong()))
         }
