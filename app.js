@@ -641,11 +641,6 @@ return {
         return
     },
     init: function () { // function 8
-        var keys = Object.keys(req_data)
-        this.log('output keys: ' + keys.length)
-         //for(var i = 0; i < 18; i++)
-        //    this.log('output keys: ' + keys[i])
-
         this.state_machine = new state_machine(
             this,
             this.handle_global_event,
