@@ -1,3 +1,5 @@
 *.xcf
 build/files/code
 *.wapp
+.vscode/
+env_init.sh
