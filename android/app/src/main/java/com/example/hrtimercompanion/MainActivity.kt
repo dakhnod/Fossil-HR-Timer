@@ -11,8 +11,11 @@ import org.json.JSONObject
 import java.lang.NumberFormatException
 
 class MainActivity : AppCompatActivity() {
-    private val QHYBRID_COMMAND_PUSH_CONFIG = "nodomain.freeyourgadget.gadgetbridge.Q_PUSH_CONFIG"
-    private val EXTRA_KEY_CONFIG_JSON = "EXTRA_CONFIG_JSON"
+    companion object {
+        val QHYBRID_COMMAND_PUSH_CONFIG = "nodomain.freeyourgadget.gadgetbridge.Q_PUSH_CONFIG"
+        val EXTRA_KEY_CONFIG_JSON = "EXTRA_CONFIG_JSON"
+        val BROADCAST_PACKAGE = "nodomain.freeyourgadget.gadgetbridge"
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,6 +62,7 @@ class MainActivity : AppCompatActivity() {
                         )
                     Toast.makeText(this, "sending to watch, please reastart timer", Toast.LENGTH_LONG).show()
                     val intent = Intent(QHYBRID_COMMAND_PUSH_CONFIG)
+                    intent.`package` = BROADCAST_PACKAGE
                     intent.putExtra(EXTRA_KEY_CONFIG_JSON, data.toString())
                     sendBroadcast(intent)
                 }catch (exception: NumberFormatException){
