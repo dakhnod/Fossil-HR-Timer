@@ -2,7 +2,7 @@
 return {
     node_name: '',
     manifest: {
-        timers: ['select_tick', 'timer_tick']
+        timers: ['select_tick', 'timer_tick', 'menu_timeout']
     },
     persist: {
         version: 1,
@@ -417,11 +417,17 @@ return {
                         self.state = 'timer_select'
                         self.draw_display_timer(response, true)
                         self.display_time_select(response)
+                        start_timer(self.node_name, 'menu_timeout', 30000)
                     }
                 }
                 if (state_phase == 'during') {
                     return function (self, state_machine, event, response) {
                         type = event.type
+
+                        if(event.class == 'user'){
+                            stop_timer(self.node_name, 'menu_timeout')
+                        }
+
                         if (type === 'middle_short_press_release') {
                             self.timer_stopwatch_start(self, response)
                         } else if (type === 'top_press') {
@@ -448,6 +454,9 @@ return {
                                     self.time_select_forward(response)
                                     self.start_forward_timer()
                                 }
+                            } else if (is_this_timer_expired(event, self.node_name, 'menu_timeout')) {
+                                self.log('menu timeout')
+                                response.go_back(true)
                             }
                         } else if (type === 'bottom_long_press_release') {
                             self.select_direction = ''
