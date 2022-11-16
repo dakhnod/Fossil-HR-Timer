@@ -111,8 +111,9 @@ class SetTimerActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
         }
 
         if (timerTargets.size == 1) {
-            Toast.makeText(this, "Sending timer...", Toast.LENGTH_SHORT).show()
-            applyTimerTarget(timerTargets.get(0))
+            val target = timerTargets[0]
+            Toast.makeText(this, "Setting timer %s".format(target), Toast.LENGTH_SHORT).show()
+            applyTimerTarget(target)
             finish()
             return
         }
