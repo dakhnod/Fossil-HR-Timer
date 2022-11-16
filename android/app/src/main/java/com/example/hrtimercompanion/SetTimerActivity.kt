@@ -6,10 +6,7 @@ import android.os.Bundle
 import android.text.format.DateFormat
 import android.util.Log
 import android.view.View
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
-import android.widget.CheckBox
-import android.widget.ListView
+import android.widget.*
 import org.json.JSONObject
 import java.util.*
 import java.util.regex.Pattern
@@ -27,26 +24,22 @@ class SetTimerActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
         // handleTimeString("free at 2:00? or maybe 11:45? how about in 26 Minutes?")
     }
 
-    private fun handleExtraText(){
+    private fun handleExtraText() {
         val text = intent.getStringExtra("android.intent.extra.TEXT") ?: return
         handleTimeString(text)
     }
 
-    override fun onItemClick(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
-        if(p0 == null){
-            return
-        }
-        val target = p0.getItemAtPosition(p2) as TimerTarget
-        Log.d(TAG, "onItemClick: " + target)
-        val millis = target.getCountdownMillis()
+    private fun applyTimerTarget(timerTarget: TimerTarget) {
+        val millis = timerTarget.getCountdownMillis()
 
         val data = JSONObject()
             .put(
                 "push", JSONObject()
                     .put(
                         "set", JSONObject()
-                            .put("stopwatchApp._.config.timer_start", JSONObject()
-                                .put("millis", millis)
+                            .put(
+                                "stopwatchApp._.config.timer_start", JSONObject()
+                                    .put("millis", millis)
                             )
                     )
             )
@@ -55,11 +48,21 @@ class SetTimerActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
         intent.`package` = MainActivity.BROADCAST_PACKAGE
         intent.putExtra(MainActivity.EXTRA_KEY_CONFIG_JSON, data.toString())
         sendBroadcast(intent)
+    }
+
+    override fun onItemClick(p0: AdapterView<*>?, p1: View?, p2: Int, p3: Long) {
+        if (p0 == null) {
+            return
+        }
+        val target = p0.getItemAtPosition(p2) as TimerTarget
+        Log.d(TAG, "onItemClick: " + target)
+
+        applyTimerTarget(target)
 
         finish()
     }
 
-    private fun handleTimeString(textConst: String){
+    private fun handleTimeString(textConst: String) {
         var text = textConst
 
         var pattern = Pattern.compile("([0-9]{1,2}):([0-9]{1,2})")
@@ -67,8 +70,8 @@ class SetTimerActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
 
         val timerTargets = ArrayList<TimerTarget>()
 
-        while(matches.find()) {
-            if(matches.groupCount() != 2){
+        while (matches.find()) {
+            if (matches.groupCount() != 2) {
                 continue
             }
 
@@ -78,7 +81,7 @@ class SetTimerActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
             val timeInHoursSeconds = (prefix * 3600) + (postfix * 60)
             timerTargets.add(AbsoluteTimerTarget((timeInHoursSeconds * 1000).toLong()))
 
-            if(prefix < 13){
+            if (prefix < 13) {
                 val timeInHoursSeconds2 = ((prefix + 12) * 3600) + (postfix * 60)
                 timerTargets.add(AbsoluteTimerTarget((timeInHoursSeconds2 * 1000).toLong()))
             }
@@ -89,16 +92,29 @@ class SetTimerActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
         pattern = Pattern.compile("(?=[^:])[0-9]+(?<=[^:])")
         matches = pattern.matcher(text)
 
-        while(matches.find()){
+        while (matches.find()) {
             val number = Integer.parseInt(matches.group() as String)
-            if(number < 24){
+            if (number < 24) {
                 timerTargets.add(AbsoluteTimerTarget(number.toLong() * 3600000))
-                if(number < 13){
+                if (number < 13) {
                     timerTargets.add(AbsoluteTimerTarget((number.toLong() + 12) * 3600000))
                 }
             }
             timerTargets.add(RelativeMinutesTimerTarget(number.toLong()))
             timerTargets.add(RelativeHoursTimerTarget(number.toLong()))
+        }
+
+        if (timerTargets.size == 0) {
+            Toast.makeText(this, "No applicable time string found", Toast.LENGTH_LONG).show()
+            finish()
+            return
+        }
+
+        if (timerTargets.size == 1) {
+            Toast.makeText(this, "Sending timer...", Toast.LENGTH_SHORT).show()
+            applyTimerTarget(timerTargets.get(0))
+            finish()
+            return
         }
 
         Log.d(TAG, "handleTimeString: ")
@@ -129,25 +145,28 @@ class SetTimerActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
         }
     }
 
-    open class RelativeSecondsTimerTarget(private val timerSeconds: Long): RelativeMillisTimerTarget(timerSeconds * 1000) {
+    open class RelativeSecondsTimerTarget(private val timerSeconds: Long) :
+        RelativeMillisTimerTarget(timerSeconds * 1000) {
         override fun getDescription(): String {
             return "in %d seconds".format(timerSeconds)
         }
     }
 
-    open class RelativeMinutesTimerTarget(private val timerMinutes: Long): RelativeSecondsTimerTarget(timerMinutes * 60) {
+    open class RelativeMinutesTimerTarget(private val timerMinutes: Long) :
+        RelativeSecondsTimerTarget(timerMinutes * 60) {
         override fun getDescription(): String {
             return "in %d minutes".format(timerMinutes)
         }
     }
 
-    open class RelativeHoursTimerTarget(private val timerHours: Long): RelativeMinutesTimerTarget(timerHours * 60) {
+    open class RelativeHoursTimerTarget(private val timerHours: Long) :
+        RelativeMinutesTimerTarget(timerHours * 60) {
         override fun getDescription(): String {
             return "in %d hours".format(timerHours)
         }
     }
 
-    class AbsoluteTimerTarget(private val timestampInFuture: Long): TimerTarget() {
+    class AbsoluteTimerTarget(private val timestampInFuture: Long) : TimerTarget() {
         override fun getDescription(): String {
             val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
             calendar.timeInMillis = timestampInFuture
@@ -162,7 +181,7 @@ class SetTimerActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
             now %= 86400000
             var dif = timestampInFuture - now
 
-            if(dif < 0){
+            if (dif < 0) {
                 dif += 86400000
             }
             return dif
