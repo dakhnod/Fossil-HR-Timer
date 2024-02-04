@@ -30,8 +30,6 @@ class SetTimerActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
     }
 
     private fun applyTimerTarget(timerTarget: TimerTarget) {
-        val millis = timerTarget.getCountdownMillis()
-
         val data = JSONObject()
             .put(
                 "push", JSONObject()
@@ -39,7 +37,7 @@ class SetTimerActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
                         "set", JSONObject()
                             .put(
                                 "stopwatchApp._.config.timer_start", JSONObject()
-                                    .put("millis", millis)
+                                    .put(timerTarget.getMillisKey(), timerTarget.getCountdownMillis())
                             )
                     )
             )
@@ -131,6 +129,8 @@ class SetTimerActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
 
         abstract fun getCountdownMillis(): Long
 
+        abstract fun getMillisKey(): String
+
         override fun toString(): String {
             return getDescription()
         }
@@ -139,6 +139,10 @@ class SetTimerActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
     open class RelativeMillisTimerTarget(private val timerMillis: Long) : TimerTarget() {
         override fun getDescription(): String {
             return "in %d millis".format(timerMillis)
+        }
+
+        override fun getMillisKey(): String {
+            return "millis"
         }
 
         override fun getCountdownMillis(): Long {
@@ -174,18 +178,13 @@ class SetTimerActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
             return "at %s".format(DateFormat.format("H:mm", calendar))
         }
 
+        override fun getMillisKey(): String {
+            return "millis_end"
+        }
+
         override fun getCountdownMillis(): Long {
             val calendar = Calendar.getInstance()
-            var now = System.currentTimeMillis()
-            now += calendar.get(Calendar.ZONE_OFFSET)
-            now += calendar.get(Calendar.DST_OFFSET)
-            now %= 86400000
-            var dif = timestampInFuture - now
-
-            if (dif < 0) {
-                dif += 86400000
-            }
-            return dif
+            return timestampInFuture - calendar.get(Calendar.ZONE_OFFSET) - calendar.get(Calendar.DST_OFFSET)
         }
 
     }
