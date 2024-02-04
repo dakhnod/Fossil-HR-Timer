@@ -376,8 +376,20 @@ return {
                 self.config.start_immediately = undefined
                 save_config = true
             }
-            if(typeof(self.config.timer_start) == 'object' && typeof(self.config.timer_start.millis) == 'number'){
+            if(typeof(self.config.timer_start) == 'object') {
                 self.timer_time = self.config.timer_start.millis
+
+                if(typeof(self.config.timer_start.millis_end) == 'number') {
+                    self.timer_time = self.config.timer_start.millis_end - (get_unix_time() * 1000)
+                    while(self.timer_time <= 0) {
+                        self.timer_time += 86400000
+                    }
+                }
+
+                if(self.timer_time == undefined) {
+                    return
+                }
+
                 self.timer_stopwatch_start(self, response)
                 self.state = 'timer_run'
                 if(self.config.timer_start.background === true && state_machine.get_current_state() == 'background'){
