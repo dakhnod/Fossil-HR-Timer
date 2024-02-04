@@ -376,10 +376,8 @@ return {
                 self.config.start_immediately = undefined
                 save_config = true
             }
-            // self.log(self.config.timer_start)
             if(typeof(self.config.timer_start) == 'object' && typeof(self.config.timer_start.millis) == 'number'){
                 self.timer_time = self.config.timer_start.millis
-                self.log('starting timer with ' + self.timer_time + ' ms', 'api_start')
                 self.timer_stopwatch_start(self, response)
                 self.state = 'timer_run'
                 if(self.config.timer_start.background === true && state_machine.get_current_state() == 'background'){
@@ -388,7 +386,6 @@ return {
                     response.open_app('stopwatchApp')
                 }
                 self.config.timer_start = undefined
-                self.log('started timer', 'api_start')
             }
 
             if(save_config){
@@ -455,7 +452,6 @@ return {
                                     self.start_forward_timer()
                                 }
                             } else if (is_this_timer_expired(event, self.node_name, 'menu_timeout')) {
-                                self.log('menu timeout')
                                 response.go_back(true)
                             }
                         } else if (type === 'bottom_long_press_release') {
