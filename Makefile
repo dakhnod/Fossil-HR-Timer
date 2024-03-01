@@ -12,12 +12,12 @@ adb_target_file := ${adb_target_dir}/${package_file}
 
 .PHONY: all build compile pack push connect install clean
 
+${package_path}: ${tools_dir}tools/pack.py ${snapshot_file}
+	python3 ${tools_dir}tools/pack.py -i build/ -o ${package_path}
+
 ${snapshot_file}: ${source_file}
 	mkdir -p build/files/code build/files/config
 	jerry-snapshot generate -f '' ${source_file} -o ${snapshot_file}
-
-${package_path}: ${tools_dir}tools/pack.py ${snapshot_file}
-	python3 ${tools_dir}tools/pack.py -i build/ -o ${package_path}
 
 compile: ${snapshot_file}
 build: ${package_path}
