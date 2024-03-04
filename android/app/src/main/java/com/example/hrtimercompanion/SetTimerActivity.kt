@@ -26,7 +26,8 @@ class SetTimerActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
 
     private fun handleExtraText() {
         val text = intent.getStringExtra("android.intent.extra.TEXT") ?: return
-        handleTimeString(text)
+        val first = intent.getBooleanExtra("EXTRA_FIRST_MATCH", false)
+        handleTimeString(text, first)
     }
 
     private fun applyTimerTarget(timerTarget: TimerTarget) {
@@ -60,7 +61,7 @@ class SetTimerActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
         finish()
     }
 
-    private fun handleTimeString(textConst: String) {
+    private fun handleTimeString(textConst: String, firstMatch: Boolean) {
         var text = textConst
 
         var pattern = Pattern.compile("([0-9]{1,2}):([0-9]{1,2})")
@@ -108,7 +109,7 @@ class SetTimerActivity : AppCompatActivity(), AdapterView.OnItemClickListener {
             return
         }
 
-        if (timerTargets.size == 1) {
+        if ((timerTargets.size == 1) || firstMatch) {
             val target = timerTargets[0]
             Toast.makeText(this, "Setting timer %s".format(target), Toast.LENGTH_SHORT).show()
             applyTimerTarget(target)
