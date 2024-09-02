@@ -9,6 +9,7 @@ return {
         data: ['auto_start_time', 'start_immediately']
     },
     config: {},
+    timer_end_string: '',
     timer_start: 0,
     timer_time: 0,
     alarm_time: 0,
@@ -19,7 +20,7 @@ return {
     state: 'dead',
     laps: [],
     last_header_text: '',
-    last_displayed_hour: 0,
+    last_displayed_minute: -1,
     title_refers_to_timer: false,
     auto_start_time: 0,
     start_immediately: false,
@@ -65,9 +66,15 @@ return {
         )
     },
     draw_display_timer: function (response, full_redraw) {
+        var now = this.get_current_time()
+        var lapLines = [
+            'now: ' + this.pad(String(now.hour), 2) + ':' + this.pad(String(now.minute), 2),
+        ]
         if (this.state === 'timer_run') {
-            var time = this.calculate_time(this.calculate_remaining_timer_time())
-            var title_string = localization_snprintf('%d hours', time.hours)
+            var remaining = this.calculate_time(this.calculate_remaining_timer_time())
+            lapLines[1] = this.timer_end_string
+
+            var title_string = localization_snprintf('%d hours', remaining.hours)
             var title_icon = 'icTimer'
         } else if(this.state === 'alarm_select') {
             var title_string = 'Better alarm'
@@ -82,7 +89,8 @@ return {
             {
                 json_file: 'timer_layout',
                 title: title_string,
-                title_icon: title_icon
+                title_icon: title_icon,
+                laps: lapLines
             }
         )
     },
@@ -94,6 +102,22 @@ return {
             hours: Math.floor(millis / 3600000),
         }
     },
+    pad: function(value, length) {
+        while(value.length < length) {
+            value = ('0' + value)
+        }
+        return value
+    },
+    format_time: function (millis) {
+        var data = {
+            minutes: Math.floor((millis / 60000) % 60),
+            hours: Math.floor((millis / 3600000) % 24)
+        }
+        data.minutes = this.pad(data.minutes, 2)
+        data.hours = this.pad(data.hours, 2)
+
+        return data
+    },
     wrap_state_machine: function(state_machine) {
         state_machine.set_current_state = state_machine.d
         state_machine.handle_event = state_machine._
@@ -104,10 +128,7 @@ return {
         return state_machine
     },
     get_current_time: function(){
-        return {
-            minute: common.minute,
-            hour: common.hour
-        }
+        return common
     },
     wrap_response: function (response) {
         response.move_hands = function (degrees_hour, degrees_minute, relative) {
@@ -315,7 +336,7 @@ return {
     timer_stopwatch_start: function(self, response){
         self.timer_start = now()
         self.start_timer_tick_timer()
-        self.last_displayed_hour = 0
+        self.last_displayed_minute = 0
         if (self.timer_time == 0) {
             self.laps.splice(0)
             self.state_machine.set_current_state('stopwatch_run')
@@ -502,7 +523,7 @@ return {
                     return function (self, state_machine, event, response) {
                         type = event.type
                         if (type === 'middle_short_press_release') {
-                            self.last_displayed_hour = 0
+                            self.last_displayed_minute = -1
                             var now_millis = (get_unix_time() + (common.time_zone_local * 60)) * 1000
                             now_millis %= 12 * 60 * 60 * 1000
                             var time_dif = self.alarm_time - now_millis
@@ -579,9 +600,11 @@ return {
                                 self.display_time_running(response)
 
                                 var time = self.calculate_time(self.calculate_passed_stopwatch_time())
-                                if (time.hours != self.last_displayed_hour) {
-                                    self.draw_display_stopwatch(response, false)
-                                    self.last_displayed_hour = time.hours
+                                if (time.minutes != self.last_displayed_minute) {
+                                    if (time.minutes == 0) {
+                                        self.draw_display_stopwatch(response, false)
+                                    }
+                                    self.last_displayed_minute = time.minutes
                                 }
                             }
                         } else if (type === 'top_short_press_release') {
@@ -612,6 +635,14 @@ return {
                 if (state_phase == 'entry') {
                     return function (self, response) {
                         self.state = state
+
+                        var currentTime = self.get_current_time()
+                        // convert to timestamp
+                        currentTime = (currentTime.hour * 3600000) + (currentTime.minute * 60000)
+                        var endTimestamp = currentTime + self.timer_time
+                        var endTimestamp = self.format_time(endTimestamp)
+                        self.timer_end_string = 'end: ' + endTimestamp.hours + ':' + endTimestamp.minutes
+
                         self.display_time_running(response)
                         self.draw_display_timer(response, true)
                     }
@@ -629,12 +660,15 @@ return {
                                 self.display_time_running(response)
 
                                 var time = self.calculate_time(self.calculate_remaining_timer_time())
-                                if (time.hours != self.last_displayed_hour) {
-                                    self.draw_display_timer(response, false)
-                                    self.last_displayed_hour = time.hours
+                                if (time.minutes != self.last_displayed_minute) {
+                                    self.draw_display_timer(response, (time.minutes % 5) == 0)
+                                    self.last_displayed_minute = time.minutes
                                 }
 
                             }
+                        } else if (type === 'time_telling_update') {
+                            var now = self.get_current_time()
+                            self.draw_display_timer()
                         } else if (type === 'bottom_short_press_release') {
                             self.timer_start += 60 * 1000
                             self.display_time_running(response)
