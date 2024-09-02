@@ -45,12 +45,6 @@ return {
         return system_state_update_event
     },
     draw_display_stopwatch: function (response, full_redraw) {
-        laps_strings = []
-        var calculate_func = this.calculate_time
-        this.laps.forEach(function (lap) {
-            var time = calculate_func(lap)
-            laps_strings.push(localization_snprintf('%.2d:%.2d:%.2d.%.3d', time.hours, time.minutes, time.seconds, time.millis))
-        })
         var title_string
         if (this.state === 'stopwatch_pause') {
             var time = this.calculate_time(this.paused_stopwatch_time)
@@ -64,7 +58,7 @@ return {
             full_redraw,
             {
                 json_file: 'timer_layout',
-                laps: laps_strings,
+                laps: this.laps,
                 title: title_string,
                 title_icon: 'icStopwatch'
             }
@@ -598,7 +592,10 @@ return {
                             self.laps.splice(0)
                             self.draw_display_stopwatch(response, true)
                         } else if (type === 'bottom_press') {
-                            self.laps.splice(0, 0, now() - self.timer_start)
+                            var passed = now() - self.timer_start
+                            passed = self.calculate_time(passed)
+                            passed = localization_snprintf('%.2d:%.2d:%.2d.%.3d', passed.hours, passed.minutes, passed.seconds, passed.millis)
+                            self.laps.splice(0, 0, passed)
                             self.laps.splice(4)
                             self.draw_display_stopwatch(response, false)
                         }
