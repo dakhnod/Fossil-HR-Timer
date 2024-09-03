@@ -420,6 +420,9 @@ return {
             }
         }
     },
+    stringStartsWith: function(string, prefix) {
+        return string.substring(0, prefix.length) === prefix;
+    },
     handle_state_specific_event: function (state, state_phase) {
         switch (state) {
             case 'background': {
@@ -448,7 +451,12 @@ return {
                     return function (self, state_machine, event, response) {
                         type = event.type
 
-                        if(event.class == 'user'){
+                        var isButtonPress = 
+                            self.stringStartsWith(type, 'top_') |
+                            self.stringStartsWith(type, 'middle_') |
+                            self.stringStartsWith(type, 'bottom_')
+
+                        if(isButtonPress){
                             stop_timer(self.node_name, 'menu_timeout')
                         }
 
