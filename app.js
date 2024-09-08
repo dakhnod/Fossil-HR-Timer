@@ -2,7 +2,7 @@
 return {
     node_name: '',
     manifest: {
-        timers: ['select_tick', 'timer_tick', 'menu_timeout']
+        timers: ['select_tick', 'timer_tick', 'menu_timeout', 'time_minute']
     },
     persist: {
         version: 1,
@@ -20,7 +20,7 @@ return {
     state: 'dead',
     laps: [],
     last_header_text: '',
-    last_displayed_minute: -1,
+    last_drawn_hour: -1,
     title_refers_to_timer: false,
     auto_start_time: 0,
     start_immediately: false,
@@ -65,8 +65,10 @@ return {
             }
         )
     },
-    draw_display_timer: function (response, full_redraw) {
-        var now = this.get_current_time()
+    draw_display_timer: function (response, full_redraw, now) {
+        if (now === undefined) {
+            now = this.get_current_time()
+        }
         var lapLines = [
             'now: ' + this.pad(String(now.hour), 2) + ':' + this.pad(String(now.minute), 2),
         ]
@@ -94,6 +96,12 @@ return {
             }
         )
     },
+    ensure_current_time_drawn: function(response) {
+        var now = this.get_current_time()
+        
+        var full_redraw = (((now.minute) % 5) == 1)
+        this.draw_display_timer(response, full_redraw, now)
+    },
     calculate_time: function (millis) {
         return {
             millis: millis % 1000,
@@ -118,6 +126,13 @@ return {
 
         return data
     },
+    start_minute_timer: function() {
+        var remainingSecs = 60 - (get_unix_time() % 60);
+        start_timer(this.node_name, 'time_minute', remainingSecs * 1000);
+    },
+    stop_minute_timer: function () {
+        stop_timer(this.node_name, 'time_minute');
+    },
     wrap_state_machine: function(state_machine) {
         state_machine.set_current_state = state_machine.d
         state_machine.handle_event = state_machine._
@@ -128,7 +143,12 @@ return {
         return state_machine
     },
     get_current_time: function(){
-        return common
+        var epoch = this.get_epoch_secs()
+        return {
+            hour: Math.floor((epoch / 3600)) % 24,
+            minute: Math.floor(epoch / 60) % 60,
+            second: epoch % 60
+        }
     },
     wrap_response: function (response) {
         response.move_hands = function (degrees_hour, degrees_minute, relative) {
@@ -250,6 +270,9 @@ return {
         if (timeout === 0) timeout = 1000
         start_timer(this.node_name, 'timer_tick', timeout)
     },
+    get_epoch_secs: function() {
+        return get_unix_time() + (common.time_zone_local * 60)
+    },
     play_notification: function (response) {
         response.send_generic_event({
             type: 'urgent_notification_new',
@@ -335,12 +358,18 @@ return {
     },
     timer_stopwatch_start: function(self, response){
         self.timer_start = now()
-        self.start_timer_tick_timer()
-        self.last_displayed_minute = 0
+        self.last_drawn_hour = -1
         if (self.timer_time == 0) {
             self.laps.splice(0)
             self.state_machine.set_current_state('stopwatch_run')
         } else {
+            var currentTime = self.get_current_time()
+            // convert to timestamp
+            currentTime = (currentTime.hour * 3600000) + (currentTime.minute * 60000)
+            var endTimestamp = currentTime + self.timer_time
+            var endTimestamp = self.format_time(endTimestamp)
+            self.timer_end_string = 'end: ' + self.pad(String(endTimestamp.hours), 2) + ':' + self.pad(String(endTimestamp.minutes), 2)
+
             self.state_machine.set_current_state('timer_run')
         }
     },
@@ -418,6 +447,12 @@ return {
             if(save_config){
                 save_node_persist(self.node_name)
             }
+        } else if (event.type === 'timer_expired') {
+            if (is_this_timer_expired(event, self.node_name, 'time_minute')) {
+                self.ensure_current_time_drawn(response);
+                // time_minute timer only triggers once, needs to be re-started
+                self.start_minute_timer()
+            }
         }
     },
     stringStartsWith: function(string, prefix) {
@@ -445,6 +480,8 @@ return {
                         self.draw_display_timer(response, true)
                         self.display_time_select(response)
                         start_timer(self.node_name, 'menu_timeout', 30000)
+
+                        self.start_minute_timer();
                     }
                 }
                 if (state_phase == 'during') {
@@ -508,8 +545,8 @@ return {
                     }
                 }
                 if (state_phase == 'exit') {
-                    return function (arg, arg2) { // function 14, 20
-
+                    return function (self, response) { // function 14, 20
+                        self.stop_minute_timer();
                     }
                 }
                 break;
@@ -525,22 +562,22 @@ return {
 
                         self.draw_display_timer(response, true)
                         self.display_alarm_select(response)
+
+                        self.start_minute_timer();
                     }
                 }
                 if (state_phase == 'during') {
                     return function (self, state_machine, event, response) {
                         type = event.type
                         if (type === 'middle_short_press_release') {
-                            self.last_displayed_minute = -1
-                            var now_millis = (get_unix_time() + (common.time_zone_local * 60)) * 1000
+                            self.last_drawn_hour = -1
+                            var now_millis = (self.get_epoch_secs()) * 1000
                             now_millis %= 12 * 60 * 60 * 1000
                             var time_dif = self.alarm_time - now_millis
                             if(time_dif < 0) time_dif += 12 * 60 * 60 * 1000
                             self.timer_time = time_dif
                             
-                            self.timer_start = now()
-                            self.start_timer_tick_timer()
-                            self.state_machine.set_current_state('timer_run')
+                            self.timer_stopwatch_start(self, response)
                         } else if (type === 'top_press') {
                             self.alarm_time -= 60 * 1000
                             if(self.alarm_time < 0){
@@ -582,8 +619,8 @@ return {
                     }
                 }
                 if (state_phase == 'exit') {
-                    return function (arg, arg2) { // function 14, 20
-
+                    return function (self, response) { // function 14, 20
+                        self.stop_minute_timer()
                     }
                 }
                 break;
@@ -594,6 +631,8 @@ return {
                         self.state = state
                         self.display_time_running(response)
                         self.draw_display_stopwatch(response, true)
+
+                        self.start_timer_tick_timer()
                     }
                 }
                 if (state_phase == 'during') {
@@ -608,11 +647,9 @@ return {
                                 self.display_time_running(response)
 
                                 var time = self.calculate_time(self.calculate_passed_stopwatch_time())
-                                if (time.minutes != self.last_displayed_minute) {
-                                    if (time.minutes == 0) {
-                                        self.draw_display_stopwatch(response, false)
-                                    }
-                                    self.last_displayed_minute = time.minutes
+                                if (time.hours != self.last_drawn_hour) {
+                                    self.draw_display_stopwatch(response, false)
+                                    self.last_drawn_hour = time.hours
                                 }
                             }
                         } else if (type === 'top_short_press_release') {
@@ -633,7 +670,7 @@ return {
                     }
                 }
                 if (state_phase == 'exit') {
-                    return function (arg, arg2) { // function 14, 20
+                    return function (self, response) { // function 14, 20
 
                     }
                 }
@@ -644,15 +681,11 @@ return {
                     return function (self, response) {
                         self.state = state
 
-                        var currentTime = self.get_current_time()
-                        // convert to timestamp
-                        currentTime = (currentTime.hour * 3600000) + (currentTime.minute * 60000)
-                        var endTimestamp = currentTime + self.timer_time
-                        var endTimestamp = self.format_time(endTimestamp)
-                        self.timer_end_string = 'end: ' + endTimestamp.hours + ':' + endTimestamp.minutes
-
                         self.display_time_running(response)
                         self.draw_display_timer(response, true)
+
+                        self.start_timer_tick_timer()
+                        self.start_minute_timer();
                     }
                 }
                 if (state_phase == 'during') {
@@ -668,15 +701,12 @@ return {
                                 self.display_time_running(response)
 
                                 var time = self.calculate_time(self.calculate_remaining_timer_time())
-                                if (time.minutes != self.last_displayed_minute) {
-                                    self.draw_display_timer(response, (time.minutes % 5) == 0)
-                                    self.last_displayed_minute = time.minutes
+                                if (time.hours != self.last_drawn_hour) {
+                                    self.draw_display_timer(response, true)
+                                    self.last_drawn_hour = time.hours
                                 }
 
                             }
-                        } else if (type === 'time_telling_update') {
-                            var now = self.get_current_time()
-                            self.draw_display_timer()
                         } else if (type === 'bottom_short_press_release') {
                             self.timer_start += 60 * 1000
                             self.display_time_running(response)
@@ -687,8 +717,8 @@ return {
                     }
                 }
                 if (state_phase == 'exit') {
-                    return function (arg, arg2) { // function 14, 20
-
+                    return function (self, response) { // function 14, 20
+                        self.stop_minute_timer();
                     }
                 }
                 break
@@ -720,7 +750,7 @@ return {
                     }
                 }
                 if (state_phase == 'exit') {
-                    return function (arg, arg2) { // function 14, 20
+                    return function (self, response) { // function 14, 20
 
                     }
                 }
