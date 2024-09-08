@@ -260,14 +260,15 @@ return {
     start_forward_timer: function () {
         start_timer(this.node_name, 'select_tick', 150)
     },
-    start_timer_tick_timer: function () {
-        var timeout = 0
-        if (this.state === 'stopwatch_run') {
-            timeout = 1000 - (this.calculate_passed_stopwatch_time() % 1000)
-        } else {
-            timeout = this.calculate_remaining_timer_time() % 1000
+    start_timer_tick_timer: function (timeout) {
+        if(timeout == undefined) {
+            if (this.state === 'stopwatch_run') {
+                timeout = 1000 - (this.calculate_passed_stopwatch_time() % 1000)
+            } else {
+                timeout = this.calculate_remaining_timer_time() % 1000
+            }
+            if (timeout === 0) timeout = 1000
         }
-        if (timeout === 0) timeout = 1000
         start_timer(this.node_name, 'timer_tick', timeout)
     },
     get_epoch_secs: function() {
@@ -363,9 +364,8 @@ return {
             self.laps.splice(0)
             self.state_machine.set_current_state('stopwatch_run')
         } else {
-            var currentTime = self.get_current_time()
             // convert to timestamp
-            currentTime = (currentTime.hour * 3600000) + (currentTime.minute * 60000)
+            var currentTime = self.get_epoch_secs() * 1000
             var endTimestamp = currentTime + self.timer_time
             var endTimestamp = self.format_time(endTimestamp)
             self.timer_end_string = 'end: ' + self.pad(String(endTimestamp.hours), 2) + ':' + self.pad(String(endTimestamp.minutes), 2)
@@ -671,7 +671,7 @@ return {
                 }
                 if (state_phase == 'exit') {
                     return function (self, response) { // function 14, 20
-
+                        stop_timer(self.node_name, 'timer_tick')
                     }
                 }
                 break
@@ -683,7 +683,9 @@ return {
 
                         self.display_time_running(response)
                         self.draw_display_timer(response, true)
-
+                        
+                        // kill any pending timers
+                        stop_timer(self.node_name, 'timer_tick')
                         self.start_timer_tick_timer()
                         self.start_minute_timer();
                     }
@@ -719,6 +721,8 @@ return {
                 if (state_phase == 'exit') {
                     return function (self, response) { // function 14, 20
                         self.stop_minute_timer();
+                        stop_timer(self.node_name, 'timer_tick')
+                        start_timer(self.node_name, 'timer_tick', self.calculate_remaining_timer_time())
                     }
                 }
                 break
