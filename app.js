@@ -45,7 +45,7 @@ return {
         }
         return system_state_update_event
     },
-    draw_display_stopwatch: function (response, full_redraw) {
+    draw_display_stopwatch: function (response, full_redraw, now) {
         var title_string
         if (this.state === 'stopwatch_pause') {
             var time = this.calculate_time(this.paused_stopwatch_time)
@@ -54,12 +54,22 @@ return {
             var time = this.calculate_time(this.calculate_passed_stopwatch_time())
             var title_string = localization_snprintf('%d hours', time.hours)
         }
+        var lap_lines = []
+        for(var i = 0; i < this.laps.length; i++) {
+            lap_lines.push(this.laps[i])
+        }
+        if(lap_lines.length < 4) {
+            if (now === undefined) {
+                now = this.get_current_time()
+            }
+            lap_lines.push('now: ' + this.pad(String(now.hour), 2) + ':' + this.pad(String(now.minute), 2))
+        }
         response.draw_screen(
             this.node_name,
             full_redraw,
             {
                 json_file: 'timer_layout',
-                laps: this.laps,
+                laps: lap_lines,
                 title: title_string,
                 title_icon: 'icStopwatch'
             }
@@ -100,6 +110,10 @@ return {
         var now = this.get_current_time()
         
         var full_redraw = (((now.minute) % 5) == 1)
+        if(this.state == 'stopwatch_run') {
+            this.draw_display_stopwatch(response, full_redraw, now)
+            return
+        }
         this.draw_display_timer(response, full_redraw, now)
     },
     calculate_time: function (millis) {
@@ -633,6 +647,7 @@ return {
                         self.draw_display_stopwatch(response, true)
 
                         self.start_timer_tick_timer()
+                        self.start_minute_timer()
                     }
                 }
                 if (state_phase == 'during') {
@@ -672,6 +687,7 @@ return {
                 if (state_phase == 'exit') {
                     return function (self, response) { // function 14, 20
                         stop_timer(self.node_name, 'timer_tick')
+                        self.stop_minute_timer()
                     }
                 }
                 break
